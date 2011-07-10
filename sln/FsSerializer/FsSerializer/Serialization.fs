@@ -252,7 +252,8 @@ module Serialization =
       | RecordType -> deserializeRecord typ (x :?> XElement)
       | UnionType -> deserializeUnion typ (x :?> XElement)
       | PrimitiveType -> deserializePrimitive typ (x :?> string)
-      | XElementType | StringType -> x
+      | XElementType -> ((x :?> XElement).Elements ()).Single () :> obj
+      | StringType -> x
       | _ -> failwith "サポートされていない型が指定されました。"
 
-  let deserialize<'a> (xml:XElement) = deserializeSupportedType typeof<'a> xml
+  let deserialize<'a> (xml:XElement) = deserializeSupportedType typeof<'a> xml :?> 'a

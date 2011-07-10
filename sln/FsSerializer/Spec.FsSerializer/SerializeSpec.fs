@@ -22,10 +22,8 @@ let ``プリミティブ型のみから構成されるレコードのシリア�
   Given fullname
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize fullname
   |> When deserialize<FullName>
+  |> It should equal fullname
   |> Verify
 
 [<Scenario>]
@@ -36,10 +34,8 @@ let ``Someプリミティブ型のみから構成されるレコードのシリ�
   Given fullname
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize fullname
   |> When deserialize<FullName>
+  |> It should equal fullname
   |> Verify
 
 [<Scenario>]
@@ -50,10 +46,8 @@ let ``XML要素を含んだレコードのシリアライズ`` () =
   Given student
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize student
   |> When deserialize<Student>
+  |> It should equal student
   |> Verify
 
 [<Scenario>]
@@ -64,10 +58,8 @@ let ``XMLコンテントを含んだレコードのシリアライズ`` () =
   Given student
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize student
   |> When deserialize<Student2>
+  |> It should equal student
   |> Verify
 
 [<Scenario>]
@@ -81,10 +73,8 @@ let ``XElementを含んだレコードのシリアライズ`` () =
   Given employee
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize employee
   |> When deserialize<Employee>
+  |> It should equal employee
   |> Verify
 
 
@@ -97,10 +87,8 @@ let ``Unionを含んだレコードのシリアライズ`` () =
   Given student
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize student
   |> When deserialize<StudentUnion>
+  |> It should equal student
   |> Verify
 
 
@@ -114,8 +102,6 @@ let ``Lisdt含んだレコードのシリアライズ`` () =
   Given studentList
   |> When serialize
   |> It should have (xmlEqual expected)
-  |> Verify
-
-  Given serialize studentList
   |> When deserialize<StudentList>
+  |> It should equal studentList
   |> Verify
