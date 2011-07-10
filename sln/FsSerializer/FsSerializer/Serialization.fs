@@ -64,26 +64,18 @@ module Serialization =
     if typ = typeof<string> then Some StringType
     else None
 
-//  let (|DateTimeType|_|) (prop:PropertyInfo) = 
-//    if prop.PropertyType = typeof<DateTime> then Some DateTimeProperty 
-//    else None
-//
-//  let (|GuidType|_|) (prop:PropertyInfo) = 
-//    if prop.PropertyType = typeof<Guid> then Some GuidProperty 
-//    else None
-//
-//  let (|XElementType|_|) (prop:PropertyInfo) = 
-//    if prop.PropertyType = typeof<XElement> then Some XElementProperty 
-//    else None
-//
+  let (|XElementType|_|) (typ:Type) = 
+    if typ = typeof<XElement> then Some XElementType 
+    else None
+
   let (|RecordType|_|) (typ:Type) = 
     if FSharpType.IsRecord typ then Some RecordType 
     else None
-//
-//  let (|UnionType|_|) (prop:PropertyInfo) = 
-//    if FSharpType.IsUnion prop.PropertyType then Some UnionProperty 
-//    else None
-//
+
+  let (|UnionType|_|) (typ:Type) = 
+    if FSharpType.IsUnion typ then Some UnionType 
+    else None
+
   let (|OptionType|_|) (typ:Type) = 
     if typ.IsGenericType && (typ.GetGenericTypeDefinition ()).GUID = typeof<Option<_>>.GUID then
       Some OptionType 
@@ -113,7 +105,6 @@ module Serialization =
 
   let getXName attGetter altGetter vallue = maybe (XName.Get <| altGetter vallue) XName.Get (attGetter vallue)
 
-
   let rec private serializeRecord (value:obj) =
     let name = getXName rootName typeName value
     let children = (serializeProperty value) <!> fields value
@@ -142,8 +133,12 @@ module Serialization =
     else
       match value.GetType () with
       | PrimitiveType | StringType -> [serializePrimitive value]
+      | XElementType -> [value]
       | OptionType -> serializeSupportedType (unsafeGet value)
       | RecordType -> [serializeRecord value]
+      | UnionType -> 
+        let (_, field) = FSharpValue.GetUnionFields (value, value.GetType ())
+        serializeSupportedType field.[0]
       | _ -> failwith "サポートされていない型が指定されました。"
 
   let serialize<'a> (value:'a) =  (serializeSupportedType value).Single () :?> XElement

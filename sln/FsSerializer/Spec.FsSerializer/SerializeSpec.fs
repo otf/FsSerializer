@@ -1,5 +1,6 @@
 ﻿module SerializeSpec
 
+open System
 open NaturalSpec
 open System.Xml.Linq
 open FsSerializer
@@ -27,6 +28,7 @@ let ``プリミティブ型のみから構成されるレコードのシリア�
 let ``Someプリミティブ型のみから構成されるレコードのシリアライズ`` () =
   let fullname = { FirstName = "Yusuke" ; LastName = "Sato"; MiddleName=(Some "W") } : FullName
   let expected = xml "<FullName FirstName=\"Yusuke\" LastName=\"Sato\" MiddleName=\"W\" />"
+
   Given fullname
   |> When serialize
   |> It should have (xmlEqual expected)
@@ -36,6 +38,7 @@ let ``Someプリミティブ型のみから構成されるレコードのシリ�
 let ``XML要素を含んだレコードのシリアライズ`` () =
   let student = { SchoolName = "Nagoya University"  } : Student
   let expected = xml "<Student><SN>Nagoya University</SN></Student>"
+
   Given student
   |> When serialize
   |> It should have (xmlEqual expected)
@@ -45,7 +48,33 @@ let ``XML要素を含んだレコードのシリアライズ`` () =
 let ``XMLコンテントを含んだレコードのシリアライズ`` () =
   let student = { SchoolName = "Nagoya University"  } : Student2
   let expected = xml "<Student2>Nagoya University</Student2>"
+
   Given student
+  |> When serialize
+  |> It should have (xmlEqual expected)
+  |> Verify
+
+[<Scenario>]
+let ``XElementを含んだレコードのシリアライズ`` () =
+  let employee = { 
+      CorporateName="Sato Shoji"
+      Profile = xml "<xml>im otf</xml>" } : Employee
+
+  let expected = xml "<Employee CorporateName=\"Sato Shoji\"><xml>im otf</xml></Employee>"
+
+  Given employee
+  |> When serialize
+  |> It should have (xmlEqual expected)
+  |> Verify
+
+
+[<Scenario>]
+let ``Unionを含んだレコードのシリアライズ`` () =
+  let student = { SchoolName = "Nagoya University"  } : Student2
+
+  let expected = xml "<Student2>Nagoya University</Student2>"
+
+  Given (StudentTwo student)
   |> When serialize
   |> It should have (xmlEqual expected)
   |> Verify

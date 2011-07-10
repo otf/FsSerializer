@@ -15,10 +15,8 @@ type FullName = {
 
 [<XmlRoot>]
 type Employee = {
-  EmployeeId : Guid
-  CorporateName : string
-  HireDate : DateTime
-  Prifile : XElement
+  [<XmlAttribute>] CorporateName : string
+  Profile : XElement
   }
 
 [<XmlRoot>]
@@ -32,8 +30,8 @@ type Student2 = {
 }
 
 type StudentUnion = 
-| One of Student
-| Two of Student2
+| StudentOne of Student
+| StudentTwo of Student2
 
 type Attribute = 
 | EmyloyeeAttribute of Employee 
