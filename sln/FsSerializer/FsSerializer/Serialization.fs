@@ -16,11 +16,18 @@ module MaybeUtil =
     | Some x -> f x
     | None -> n
 
+  let (>>?) m f =
+    match m with
+    | Some x -> f x
+    | None -> None
+
 module AttributeHelper =
+  open MaybeUtil
+
   let private att<'att> (typ:MemberInfo) = 
     let atts = typ.GetCustomAttributes (typeof<'att>, false) 
-    let att = atts.Single ()
-    att :?> 'att
+    if atts.Any () then Some (atts.Single () :?> 'att)
+    else None
 
   let isAtt<'att> (prop:MemberInfo) = 
     let atts = prop.GetCustomAttributes (typeof<'att>, false) 
@@ -42,13 +49,13 @@ module AttributeHelper =
     let typ = value.GetType ()
     (typ.GetProperty ("Value")).GetValue (value, null)
 
-  let rootName (value:obj) = maybeName (att<XmlRootAttribute> (value.GetType ())).ElementName 
+  let rootName (value:obj) = att<XmlRootAttribute> (value.GetType ()) >>? (fun att -> Some att.ElementName) >>? maybeName
 
-  let elementName (typ:MemberInfo) = maybeName (att<XmlElementAttribute> typ).ElementName
+  let elementName (typ:MemberInfo) = att<XmlElementAttribute> (typ) >>? (fun att -> Some att.ElementName) >>? maybeName
 
-  let attributeName (typ:MemberInfo) = maybeName  (att<XmlAttributeAttribute> typ).AttributeName
+  let attributeName (typ:MemberInfo) = att<XmlAttributeAttribute> (typ) >>? (fun att -> Some att.AttributeName) >>? maybeName
 
-  let arrayName (typ:Type) = maybeName (att<XmlArrayAttribute> typ).ElementName
+  let arrayName (typ:Type) = att<XmlArrayAttribute> (typ) >>? (fun att -> Some att.ElementName) >>? maybeName
 
 [<AutoOpen>]
 module Serialization =
@@ -127,6 +134,10 @@ module Serialization =
     | ArrayProperty -> failwith ""
     | _ -> getField value prop |> serializeSupportedType
 
+  and private serializeUnion (value:obj) =
+    let (_, field) = FSharpValue.GetUnionFields (value, value.GetType ())
+    serializeSupportedType field.[0]
+
   and private serializeSupportedType (value:obj) : obj list =
     if value = null then // Option は objだと null だよねー
       []
@@ -136,9 +147,7 @@ module Serialization =
       | XElementType -> [value]
       | OptionType -> serializeSupportedType (unsafeGet value)
       | RecordType -> [serializeRecord value]
-      | UnionType -> 
-        let (_, field) = FSharpValue.GetUnionFields (value, value.GetType ())
-        serializeSupportedType field.[0]
+      | UnionType -> serializeUnion value
       | _ -> failwith "サポートされていない型が指定されました。"
 
   let serialize<'a> (value:'a) =  (serializeSupportedType value).Single () :?> XElement

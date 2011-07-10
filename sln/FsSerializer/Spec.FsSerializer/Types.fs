@@ -6,20 +6,17 @@ open System.Xml.Serialization
 
 // tuple は無理ぽ
 
-[<XmlRoot>]
 type FullName = { 
   [<XmlAttribute>] FirstName : string
   [<XmlAttribute>] LastName : string
   [<XmlAttribute>] MiddleName : string option
   }
 
-[<XmlRoot>]
 type Employee = {
   [<XmlAttribute>] CorporateName : string
   Profile : XElement
   }
 
-[<XmlRoot>]
 type Student = {
   [<XmlElement("SN")>] SchoolName : string
 }
