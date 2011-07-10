@@ -34,6 +34,10 @@ type StudentList = {
   Students : Student2 list
 }
 
+type AddressList = {
+  [<XmlArray>] Address : string list
+}
+
 type Attribute = 
 | EmyloyeeAttribute of Employee 
 | StudentAttribute of StudentUnion

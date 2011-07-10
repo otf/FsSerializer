@@ -93,7 +93,7 @@ let ``Unionを含んだレコードのシリアライズ`` () =
 
 
 [<Scenario>]
-let ``Lisdt含んだレコードのシリアライズ`` () =
+let ``List含んだレコードのシリアライズ`` () =
   let student = { SchoolName = "Nagoya University"  } : Student2
   let student2 = { SchoolName = "Tokyo University"  } : Student2
   let studentList = { Students = [ student ; student2 ] } : StudentList
@@ -104,4 +104,16 @@ let ``Lisdt含んだレコードのシリアライズ`` () =
   |> It should have (xmlEqual expected)
   |> When deserialize<StudentList>
   |> It should equal studentList
+  |> Verify
+
+[<Scenario>]
+let ``StringList含んだレコードのシリアライズ`` () =
+  let addressList = { Address = [ "000-000-000" ; "111-111-111" ] } : AddressList
+  let expected = xml "<AddressList><Address>000-000-000</Address><Address>111-111-111</Address></AddressList>"
+
+  Given addressList
+  |> When serialize
+  |> It should have (xmlEqual expected)
+//  |> When deserialize<AddressList>
+//  |> It should equal addressList
   |> Verify

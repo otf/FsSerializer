@@ -94,7 +94,7 @@ module AttributeHelper =
 
   let attributeName (typ:MemberInfo) = att<XmlAttributeAttribute> (typ) >>? (fun att -> Some att.AttributeName) >>? maybeName
 
-  let arrayName (typ:Type) = att<XmlArrayAttribute> (typ) >>? (fun att -> Some att.ElementName) >>? maybeName
+  let arrayName (typ:MemberInfo) = att<XmlArrayAttribute> (typ) >>? (fun att -> Some att.ElementName) >>? maybeName
 
 
 [<AutoOpen>]
@@ -144,7 +144,7 @@ module Serialization =
     else None
 
   let (|ArrayProperty|_|) (prop:PropertyInfo) =
-    if isAtt<XmlElementAttribute> prop then Some ArrayProperty
+    if isAtt<XmlArrayAttribute> prop then Some ArrayProperty
     else None
 
   let private serializePrimitive (value:obj) =
@@ -169,9 +169,16 @@ module Serialization =
         match getField value prop |> serializeSupportedType with
         | [x] -> [XAttribute (name, x ) :> obj]
         | [] -> []
-        | _ -> failwith ""
+        | _ -> failwith "属性値が複数の値を返しました。"
 
-    | ArrayProperty -> failwith "undefined"
+    | ArrayProperty ->
+        let name = getXName arrayName propName prop
+        let baseType = listBaseType prop.PropertyType
+        let list = getField value prop
+        let values = list :?> IEnumerable
+        seq [ for v in values -> XElement(name, serializeSupportedType v) :> obj ]
+        |> List.ofSeq
+
     | _ -> getField value prop |> serializeSupportedType
 
   and private serializeUnion (value:obj) =
