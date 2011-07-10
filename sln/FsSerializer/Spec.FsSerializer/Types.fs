@@ -2,12 +2,14 @@
 
 open System
 open System.Xml.Linq
+open System.Xml.Serialization
 
 // tuple は無理ぽ
 
+[<XmlRoot>]
 type FullName = { 
-  FirstName : string
-  LastName : string
+  [<XmlAttribute>] FirstName : string
+  [<XmlAttribute>] LastName : string
   }
 
 type Employee = {
