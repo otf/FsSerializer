@@ -16,14 +16,7 @@ module MaybeUtil =
     | Some x -> f x
     | None -> n
 
-  let mplus m1 m2 = 
-    match (m1, m2) with
-    | (Some x, _) -> Some x
-    | (_, Some x) -> Some x
-    | (_, _ ) -> None
-
 module AttributeHelper =
-
   let private att<'att> (typ:MemberInfo) = 
     let atts = typ.GetCustomAttributes (typeof<'att>, false) 
     let att = atts.Single ()
@@ -39,7 +32,15 @@ module AttributeHelper =
 
   let propName (prop:PropertyInfo) = prop.Name
 
-  let props (value:obj) = (value.GetType ()).GetProperties () |> List.ofArray
+  let fields (value:obj) = FSharpType.GetRecordFields (value.GetType ()) |> List.ofArray
+
+  let getField (value:obj) (prop:PropertyInfo) : obj = FSharpValue.GetRecordField (value, prop)
+  
+  let isOption (typ:Type) = typ.IsGenericType && (typ.GetGenericTypeDefinition () ).GUID = typeof<Option<_>>.GUID 
+
+  let unsafeGet (value:obj) = 
+    let typ = value.GetType ()
+    (typ.GetProperty ("Value")).GetValue (value, null)
 
   let rootName (value:obj) = maybeName (att<XmlRootAttribute> (value.GetType ())).ElementName 
 
@@ -48,7 +49,6 @@ module AttributeHelper =
   let attributeName (typ:MemberInfo) = maybeName  (att<XmlAttributeAttribute> typ).AttributeName
 
   let arrayName (typ:Type) = maybeName (att<XmlArrayAttribute> typ).ElementName
-  
 
 [<AutoOpen>]
 module Serialization =
@@ -84,10 +84,10 @@ module Serialization =
 //    if FSharpType.IsUnion prop.PropertyType then Some UnionProperty 
 //    else None
 //
-//  let (|OptionType|_|) (prop:PropertyInfo) = 
-//    if prop.PropertyType.IsGenericType && (prop.PropertyType.GetGenericTypeDefinition ()) = typeof<Option<_>> then
-//      Some OptionProperty 
-//    else None
+  let (|OptionType|_|) (typ:Type) = 
+    if typ.IsGenericType && (typ.GetGenericTypeDefinition ()).GUID = typeof<Option<_>>.GUID then
+      Some OptionType 
+    else None
 //
 //  let (|ListType|_|) (prop:PropertyInfo) = 
 //    if prop.PropertyType.IsGenericType && (prop.PropertyType.GetGenericTypeDefinition ()) = typeof<List<_>> then
@@ -113,27 +113,39 @@ module Serialization =
 
   let getXName attGetter altGetter vallue = maybe (XName.Get <| altGetter vallue) XName.Get (attGetter vallue)
 
-  let private serializeProperty (value:obj) (prop:PropertyInfo) =
-    match prop with
-    | ElementProperty -> failwith ""
-    | AttributeProperty -> 
-        let name = getXName attributeName propName prop
-        let attValue = prop.GetValue (value, null) |> serializePrimitive
-        XAttribute (name, attValue )
-    | ArrayProperty -> failwith ""
-    | _ -> failwith ""
 
-  let private serializeRecord (value:obj) =
+  let rec private serializeRecord (value:obj) =
     let name = getXName rootName typeName value
-    let children = (serializeProperty value) <!> props value
+    let children = (serializeProperty value) <!> fields value
     XElement (name , children) :> obj
 
-  let private serializeSupportedType (value:obj) : obj =
-    match value.GetType () with
-    | PrimitiveType | StringType -> serializePrimitive value
-    | RecordType -> serializeRecord value
-    | _ -> failwith "サポートされていない型が指定されました。"
+  and private serializeProperty (value:obj) (prop:PropertyInfo) : obj list =
+    match prop with
+    | ElementProperty ->
+        let name = getXName elementName propName prop
+        let elementValue = getField value prop |> serializeSupportedType
+        [XElement (name, elementValue ) :> obj]
 
-  let serialize<'a> (value:'a) =  (serializeSupportedType value) :?> XElement
+    | AttributeProperty -> 
+        let name = getXName attributeName propName prop
+        match getField value prop |> serializeSupportedType with
+        | [x] -> [XAttribute (name, x ) :> obj]
+        | [] -> []
+        | _ -> failwith ""
+
+    | ArrayProperty -> failwith ""
+    | _ -> getField value prop |> serializeSupportedType
+
+  and private serializeSupportedType (value:obj) : obj list =
+    if value = null then // Option は objだと null だよねー
+      []
+    else
+      match value.GetType () with
+      | PrimitiveType | StringType -> [serializePrimitive value]
+      | OptionType -> serializeSupportedType (unsafeGet value)
+      | RecordType -> [serializeRecord value]
+      | _ -> failwith "サポートされていない型が指定されました。"
+
+  let serialize<'a> (value:'a) =  (serializeSupportedType value).Single () :?> XElement
 
   let deserialize<'a> (xml:XElement) = failwith<'a> "undefined"

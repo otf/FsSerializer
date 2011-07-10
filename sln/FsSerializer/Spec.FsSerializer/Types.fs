@@ -10,8 +10,10 @@ open System.Xml.Serialization
 type FullName = { 
   [<XmlAttribute>] FirstName : string
   [<XmlAttribute>] LastName : string
+  [<XmlAttribute>] MiddleName : string option
   }
 
+[<XmlRoot>]
 type Employee = {
   EmployeeId : Guid
   CorporateName : string
@@ -19,13 +21,23 @@ type Employee = {
   Prifile : XElement
   }
 
+[<XmlRoot>]
 type Student = {
+  [<XmlElement("SN")>] SchoolName : string
+}
+
+[<XmlRoot>]
+type Student2 = {
   SchoolName : string
 }
 
+type StudentUnion = 
+| One of Student
+| Two of Student2
+
 type Attribute = 
 | EmyloyeeAttribute of Employee 
-| StudentAttribute of Student
+| StudentAttribute of StudentUnion
 | OtherAttribute of string
 
 type Person = {
