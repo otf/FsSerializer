@@ -114,6 +114,6 @@ let ``StringList含んだレコードのシリアライズ`` () =
   Given addressList
   |> When serialize
   |> It should have (xmlEqual expected)
-//  |> When deserialize<AddressList>
-//  |> It should equal addressList
+  |> When deserialize<AddressList>
+  |> It should equal addressList
   |> Verify

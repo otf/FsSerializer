@@ -234,8 +234,11 @@ module Serialization =
         deserializeSupportedType propType att.Value
 
     | (ArrayProperty, _) -> 
-//        let name = getXName arrayName propName prop
-        failwith "undefined"
+        let name = getXName arrayName propName prop
+        let baseType = listBaseType propType
+        let elements = x.Elements name
+        seq [ for e in elements -> deserializeSupportedType baseType e.Value ] 
+        |> List.ofSeq |> castList baseType
         
     | (_, XElementType) -> deserializeSupportedType propType x
     | (_, ListType) -> 
