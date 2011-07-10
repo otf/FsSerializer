@@ -78,3 +78,15 @@ let ``Unionを含んだレコードのシリアライズ`` () =
   |> When serialize
   |> It should have (xmlEqual expected)
   |> Verify
+
+[<Scenario>]
+let ``Lisdt含んだレコードのシリアライズ`` () =
+  let student = { SchoolName = "Nagoya University"  } : Student2
+  let student2 = { SchoolName = "Tokyo University"  } : Student2
+  let studentList = { Students = [ student ; student2 ] } : StudentList
+  let expected = xml "<StudentList><Student2>Nagoya University</Student2><Student2>Tokyo University</Student2></StudentList>"
+
+  Given studentList
+  |> When serialize
+  |> It should have (xmlEqual expected)
+  |> Verify

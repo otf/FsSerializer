@@ -1,6 +1,7 @@
 ﻿namespace FsSerializer
 
 open System
+open System.Collections
 open System.Xml.Linq
 open System.Xml.Serialization
 open System.Linq
@@ -87,13 +88,12 @@ module Serialization =
     if typ.IsGenericType && (typ.GetGenericTypeDefinition ()).GUID = typeof<Option<_>>.GUID then
       Some OptionType 
     else None
-//
-//  let (|ListType|_|) (prop:PropertyInfo) = 
-//    if prop.PropertyType.IsGenericType && (prop.PropertyType.GetGenericTypeDefinition ()) = typeof<List<_>> then
-//      Some ListProperty 
-//    else None
 
-//
+  let (|ListType|_|) (typ:Type) = 
+    if typ.IsGenericType && (typ.GetGenericTypeDefinition ()).GUID = typeof<List<_>>.GUID then
+      Some ListType 
+    else None
+
 
   let (|AttributeProperty|_|) (prop:PropertyInfo) =
     if isAtt<XmlAttributeAttribute> prop then Some AttributeProperty
@@ -138,6 +138,10 @@ module Serialization =
     let (_, field) = FSharpValue.GetUnionFields (value, value.GetType ())
     serializeSupportedType field.[0]
 
+  and private serializeList (value:obj) =
+    let values = value :?> IEnumerable
+    seq [ for v in values -> serializeSupportedType v ] |> Seq.concat |> List.ofSeq
+
   and private serializeSupportedType (value:obj) : obj list =
     if value = null then // Option は objだと null だよねー
       []
@@ -146,6 +150,7 @@ module Serialization =
       | PrimitiveType | StringType -> [serializePrimitive value]
       | XElementType -> [value]
       | OptionType -> serializeSupportedType (unsafeGet value)
+      | ListType -> serializeList value
       | RecordType -> [serializeRecord value]
       | UnionType -> serializeUnion value
       | _ -> failwith "サポートされていない型が指定されました。"

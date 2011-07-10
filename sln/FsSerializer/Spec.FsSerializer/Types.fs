@@ -30,6 +30,10 @@ type StudentUnion =
 | StudentOne of Student
 | StudentTwo of Student2
 
+type StudentList = {
+  Students : Student2 list
+}
+
 type Attribute = 
 | EmyloyeeAttribute of Employee 
 | StudentAttribute of StudentUnion
