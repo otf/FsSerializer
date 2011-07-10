@@ -29,8 +29,11 @@ module ReflectionHelper =
   let listType = typeof<List<_>>.GetGenericTypeDefinition ()
 
   let optionBaseType (typ:Type) = (typ.GetGenericArguments ()).[0]
+  
+  let listBaseType (typ:Type) = (typ.GetGenericArguments ()).[0]
 
-  let typeName (value:obj) = value.GetType().Name
+  let typeNameType (typ:Type) = typ.Name
+  let typeName (value:obj) = value.GetType() |> typeNameType
 
   let propName (prop:PropertyInfo) = prop.Name
 
@@ -42,10 +45,25 @@ module ReflectionHelper =
 
   let createRecord (typ:Type) (args:obj list) = FSharpValue.PreComputeRecordConstructor (typ) (List.toArray args)
 
+  let unionCases (typ:Type) = FSharpType.GetUnionCases (typ) |> List.ofArray
+
+  let typeOfUnionCase (case:UnionCaseInfo) = ((case.GetFields ()).Single ()).PropertyType
+    
+  let createUnion (case:UnionCaseInfo) (arg:obj) = FSharpValue.PreComputeUnionConstructor case [| arg |]
+
   let castOption typ (opt:obj option) : obj = 
     let someCase = (FSharpType.GetUnionCases (optionType.MakeGenericType ([|typ|]) )).Single (fun x-> x.Name = "Some")
     let newOpt = FSharpValue.PreComputeUnionConstructor (someCase) 
     maybe (None :> obj) (fun x -> newOpt [|x|]) opt
+
+  let castList typ (list:obj list) : obj = 
+    let listType = listType.MakeGenericType ([|typ|])
+    let emptyCase = (FSharpType.GetUnionCases (listType)).First ()
+    let cons = listType.GetMethod ("Cons")
+    let mutable result = FSharpValue.PreComputeUnionConstructor emptyCase [||]
+    for e in list |> List.rev do
+      result <- cons.Invoke (null, [| e ; result |])
+    result
 
 module AttributeHelper =
   open MaybeUtil
@@ -68,7 +86,9 @@ module AttributeHelper =
     let typ = value.GetType ()
     (typ.GetProperty ("Value")).GetValue (value, null)
 
-  let rootName (value:obj) = att<XmlRootAttribute> (value.GetType ()) >>? (fun att -> Some att.ElementName) >>? maybeName
+  let rootNameType (typ:Type) = att<XmlRootAttribute> typ >>? (fun att -> Some att.ElementName) >>? maybeName
+
+  let rootName (value:obj) = value.GetType () |> rootNameType
 
   let elementName (typ:MemberInfo) = att<XmlElementAttribute> (typ) >>? (fun att -> Some att.ElementName) >>? maybeName
 
@@ -151,7 +171,7 @@ module Serialization =
         | [] -> []
         | _ -> failwith ""
 
-    | ArrayProperty -> failwith ""
+    | ArrayProperty -> failwith "undefined"
     | _ -> getField value prop |> serializeSupportedType
 
   and private serializeUnion (value:obj) =
@@ -206,18 +226,33 @@ module Serialization =
         let att = x.Attribute (name)
         deserializeSupportedType propType att.Value
 
-    | (ArrayProperty, _) -> failwith ""
-    | _ -> failwith prop.PropertyType.Name
+    | (ArrayProperty, _) -> 
+//        let name = getXName arrayName propName prop
+        failwith "undefined"
+        
+    | (_, XElementType) -> deserializeSupportedType propType x
+    | (_, ListType) -> 
+      let baseType = listBaseType propType
+      let elements = x.Elements () |> List.ofSeq
+      (deserializeSupportedType baseType <!> elements) |> (castList baseType)
+
+    | (_, _) -> deserializeSupportedType propType x.Value
 
   and deserializeRecord (typ:Type) (x:XElement) = 
     let fieldValues = (deserializeProperty x) <!> fieldsOfType typ
     createRecord typ fieldValues
+
+  and deserializeUnion (typ:Type) (x:XElement) =
+    let matchCase = unionCases typ |> List.find (fun c -> x.Name = getXName rootNameType typeNameType (typeOfUnionCase c))
+    let fieldType = typeOfUnionCase matchCase
+    createUnion matchCase (deserializeSupportedType fieldType x)
     
   and deserializeSupportedType (typ:Type) (x:obj) : obj = 
     match typ with
       | RecordType -> deserializeRecord typ (x :?> XElement)
+      | UnionType -> deserializeUnion typ (x :?> XElement)
       | PrimitiveType -> deserializePrimitive typ (x :?> string)
-      | StringType -> x
+      | XElementType | StringType -> x
       | _ -> failwith "サポートされていない型が指定されました。"
 
   let deserialize<'a> (xml:XElement) = deserializeSupportedType typeof<'a> xml

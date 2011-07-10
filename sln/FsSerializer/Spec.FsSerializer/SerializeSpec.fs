@@ -66,6 +66,10 @@ let ``XMLコンテントを含んだレコードのシリアライズ`` () =
   |> It should have (xmlEqual expected)
   |> Verify
 
+  Given serialize student
+  |> When deserialize<Student2>
+  |> Verify
+
 [<Scenario>]
 let ``XElementを含んだレコードのシリアライズ`` () =
   let employee = { 
@@ -79,17 +83,26 @@ let ``XElementを含んだレコードのシリアライズ`` () =
   |> It should have (xmlEqual expected)
   |> Verify
 
+  Given serialize employee
+  |> When deserialize<Employee>
+  |> Verify
+
 
 [<Scenario>]
 let ``Unionを含んだレコードのシリアライズ`` () =
-  let student = { SchoolName = "Nagoya University"  } : Student2
+  let student = StudentTwo ( { SchoolName = "Nagoya University"  } : Student2)
 
   let expected = xml "<Student2>Nagoya University</Student2>"
 
-  Given (StudentTwo student)
+  Given student
   |> When serialize
   |> It should have (xmlEqual expected)
   |> Verify
+
+  Given serialize student
+  |> When deserialize<StudentUnion>
+  |> Verify
+
 
 [<Scenario>]
 let ``Lisdt含んだレコードのシリアライズ`` () =
@@ -101,4 +114,8 @@ let ``Lisdt含んだレコードのシリアライズ`` () =
   Given studentList
   |> When serialize
   |> It should have (xmlEqual expected)
+  |> Verify
+
+  Given serialize studentList
+  |> When deserialize<StudentList>
   |> Verify
