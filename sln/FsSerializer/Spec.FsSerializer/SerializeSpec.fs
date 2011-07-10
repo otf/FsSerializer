@@ -24,6 +24,10 @@ let ``プリミティブ型のみから構成されるレコードのシリア�
   |> It should have (xmlEqual expected)
   |> Verify
 
+  Given serialize fullname
+  |> When deserialize<FullName>
+  |> Verify
+
 [<Scenario>]
 let ``Someプリミティブ型のみから構成されるレコードのシリアライズ`` () =
   let fullname = { FirstName = "Yusuke" ; LastName = "Sato"; MiddleName=(Some "W") } : FullName
@@ -34,6 +38,10 @@ let ``Someプリミティブ型のみから構成されるレコードのシリ�
   |> It should have (xmlEqual expected)
   |> Verify
 
+  Given serialize fullname
+  |> When deserialize<FullName>
+  |> Verify
+
 [<Scenario>]
 let ``XML要素を含んだレコードのシリアライズ`` () =
   let student = { SchoolName = "Nagoya University"  } : Student
@@ -42,6 +50,10 @@ let ``XML要素を含んだレコードのシリアライズ`` () =
   Given student
   |> When serialize
   |> It should have (xmlEqual expected)
+  |> Verify
+
+  Given serialize student
+  |> When deserialize<Student>
   |> Verify
 
 [<Scenario>]
